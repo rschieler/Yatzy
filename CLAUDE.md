@@ -4,7 +4,7 @@ Würfelspiel für Ronny und Familie. Live: https://rschieler.github.io/Yatzy/ (G
 
 ## Grundsätze
 - Schweizer Schreibweise («ss», Anführungszeichen « »). Ronny will knappe Antworten und fertige Lösungen statt Optionen, auf Deutsch.
-- Alles in **einer Datei `index.html`**, keine Build-Schritte. Nach Änderungen an eigenen Dateien in `sw.js` die Cache-Version `C` erhöhen.
+- Alles in **einer Datei `index.html`**, keine Build-Schritte. Nach Änderungen an eigenen Dateien in `sw.js` die Cache-Version `C` erhöhen. Beim Aufräumen alter Caches nur solche mit Präfix `yatzy-` löschen, weil Klötzli, Rotate Rings usw. auf derselben Domain rschieler.github.io liegen.
 
 ## Regeln (Hausregeln, nicht ändern ohne Auftrag)
 - Oben Einer–Sechser, Bonus **25** ab 63.
