@@ -236,6 +236,9 @@ body.one .go.mini .n{width:24px;height:24px;font-size:14px}
 .die.roll{animation:hop .9s both}
 @keyframes hop{0%{translate:0 0;animation-timing-function:cubic-bezier(.2,.7,.4,1)}40%{translate:0 -34%;animation-timing-function:cubic-bezier(.55,0,.9,.5)}75%{translate:0 0}100%{translate:0 0}}
 @media(prefers-reduced-motion:reduce){.cube{transition:none}.die.roll{animation:none}}
+.dim{opacity:.45}
+.slot.off,.slot.off:empty{background:transparent;box-shadow:inset 0 0 0 2px var(--slotE);opacity:.35}
+.riv .slot{margin:0 auto}
 </style>
 </head>
 <body>
@@ -339,7 +342,7 @@ let one=LS.get('one',false);document.body.classList.toggle('one',one);
 const SHORT={u1:'Einer',u2:'Zweier',u3:'Dreier',u4:'Vierer',u5:'Fünfer',u6:'Sechser',p1:'Paar',p2:'2 Paare',k3:'3x',k4:'4x',ss:'Kl. Strasse',ls:'Gr. Strasse',fh:'Full House',ch:'Chance',yz:'Yatzy'};
 function renderChips(){
   const c=$('chips');if(!one)return;
-  const live=!S.over&&!rolling&&S.rolls>0&&!isBot(S.cur)&&viewIdx()===S.cur;
+  const live=!S.over&&!rolling&&S.rolls>0&&!isBot(S.cur);
   if(!live){c.innerHTML=`<p>${S.over?'':botNow()?'Der Bot ist am Zug':'Vorschläge nach dem Wurf'}</p>`;return}
   const p=S.players[S.cur];
   const open=CATS.filter(k=>!has(p,k)).map(k=>({k,v:score(k.id,S.dice),r:val(k,S.dice,p)})).sort((a,b)=>b.r-a.r);
@@ -352,7 +355,7 @@ const save=()=>LS.set('game',S);
 const isBot=i=>!!(S.players[i]&&S.players[i].bot);
 const botNow=()=>!S.over&&isBot(S.cur);
 const humans=()=>S.players.filter(p=>!p.bot).map(p=>p.n);
-const viewIdx=()=>view!=null?view:(S.over||isBot(S.cur))?Math.max(0,S.players.findIndex(p=>!p.bot)):S.cur;
+const viewIdx=()=>view!=null?view:(S.over||isBot(S.cur)||S.players.length===2)?Math.max(0,S.players.findIndex(p=>!p.bot)):S.cur;
 function fresh(mode,names){return{id:Date.now().toString(36),mode,players:mode==='bot'?[{n:names[0],s:{}},{n:'Bot',s:{},bot:1}]:names.map(n=>({n,s:{}})),cur:0,dice:[1,2,3,4,5],held:[0,0,0,0,0],rolls:0,over:false}}
 function verdict(){
   const ps=S.players.map(p=>({n:p.n,t:total(p),bot:p.bot})).sort((a,b)=>b.t-a.t);
@@ -392,14 +395,22 @@ function renderBoard(){
 function renderGrid(){
   const vi=viewIdx(),ri=S.players.length===2?1-vi:-1,P=S.players[vi],R=ri>=0?S.players[ri]:null;
   const live=!S.over&&!rolling&&S.rolls>0&&vi===S.cur&&!isBot(S.cur);
+  const actA=!S.over&&S.cur===vi,actB=!!R&&!S.over&&S.cur===ri;
+  const liveB=actB&&!rolling&&S.rolls>0&&!isBot(ri);
   const cell=(k,row,col)=>{
-    let v='',cls='slot',can=false;
-    if(has(P,k)){v=P.s[k.id];cls+=' done';if(justWrote&&justWrote.p===vi&&justWrote.id===k.id)cls+=' new'}
+    let v='',cls='slot',can=false,bx=null;
+    if(has(P,k)){v=P.s[k.id];cls+=' done'+(actB?' dim':'');if(justWrote&&justWrote.p===vi&&justWrote.id===k.id)cls+=' new'}
     else if(live){v=score(k.id,S.dice);cls+=' pv'+(v?'':' z')+(sel===k.id?' sel':'');can=true}
-    let rv='',rc='riv';
-    if(R){if(has(R,k)){rv=R.s[k.id];if(justWrote&&justWrote.p===ri&&justWrote.id===k.id)rc+=' flash'}else if(botPick&&botPick.id===k.id&&isBot(ri)){rv=botPick.v;rc+=' pick'}}
+    else if(!actA&&R)cls+=' off';
+    let rv='';
+    if(R){
+      if(has(R,k)){const f=justWrote&&justWrote.p===ri&&justWrote.id===k.id?' flash':'';rv=`<span class="riv${f}${actA?' dim':''}" aria-hidden="true">${R.s[k.id]}</span>`}
+      else if(botPick&&botPick.id===k.id&&isBot(ri))rv=`<span class="riv pick" aria-hidden="true">${botPick.v}</span>`;
+      else if(liveB){const x=score(k.id,S.dice);rv=`<span class="riv"><span class="slot pv${x?'':' z'}${sel===k.id?' sel':''}">${x}</span></span>`;can=true;bx=x}
+      else rv=`<span class="riv">${actB?'<span class="slot"></span>':''}</span>`;
+    }
     const tag=can?'button':'div';
-    return `<${tag} class="cell${has(P,k)?' fin':''}${row%2?'':' alt'}${can?' can':''}${can&&sel===k.id?' on':''}" style="grid-row:${row};grid-column:${col}" data-k="${k.id}" aria-label="${k.l}${v!==''?(can?` – ${v} Punkte eintragen`:`: ${v}`):''}"><span class="tile" aria-hidden="true">${tileHTML(k)}</span><span class="${cls}">${v}</span>${R?`<span class="${rc}" aria-hidden="true">${rv}</span>`:''}</${tag}>`;
+    return `<${tag} class="cell${(actB?has(R,k):has(P,k))?' fin':''}${row%2?'':' alt'}${can?' can':''}${can&&sel===k.id?' on':''}" style="grid-row:${row};grid-column:${col}" data-k="${k.id}" aria-label="${k.l}${bx!=null?` – ${bx} Punkte eintragen`:v!==''?(can?` – ${v} Punkte eintragen`:`: ${v}`):''}"><span class="tile" aria-hidden="true">${tileHTML(k)}</span><span class="${cls}">${v}</span>${rv}</${tag}>`;
   };
   const bv=(p,cls)=>{const b=bonus(p),u=upSum(p);if(b===25)return `<span class="${cls} ok">+25</span>`;return `<span class="${cls}${b===0?' no':''}">${u}<small>/63</small></span>`};
   const sp=(row,tile,mine,rival,lab)=>`<div class="cell xrow${row%2?'':' alt'}" style="grid-row:${row};grid-column:1" aria-label="${lab}"><span class="tile xt" aria-hidden="true">${tile}</span>${mine}${R?rival:''}</div>`;
@@ -475,7 +486,7 @@ function hold(i){
 }
 function choose(id,byBot){
   if(S.over||rolling||S.rolls===0)return;
-  if(!byBot&&(botNow()||viewIdx()!==S.cur))return;
+  if(!byBot&&(botNow()||!(viewIdx()===S.cur||(S.players.length===2&&1-viewIdx()===S.cur))))return;
   const p=S.players[S.cur],k=CATS.find(c=>c.id===id);if(!k||has(p,k))return;
   const prev=JSON.stringify(S),v=score(id,S.dice);
   p.s[id]=v;justWrote={p:S.cur,id};botPick=null;sel=null;
